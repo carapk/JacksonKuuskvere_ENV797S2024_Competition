@@ -5,16 +5,6 @@ date: "2024-03-28"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
 ```{r setup}
 library(lubridate)
 library(ggplot2)
@@ -33,25 +23,23 @@ library(zoo)
 
 ## Data
 
-You can also embed plots, for example:
-
 ```{r data, echo=FALSE}
 
 # loading data
-load_RAW <- read_excel("./Data/load.xlsx",col_names=TRUE)
+load_RAW <- read_excel("./Data/load.xlsx",col_names=TRUE,na="NA")
 humidity_RAW <- read_excel("./Data/relative_humidity.xlsx",col_names=TRUE)
 temperature_RAW <- read_excel("./Data/temperature.xlsx",col_names=TRUE)
-which(is.na(load_RAW))
-#na.approx(load_RAW)
+
 # cleaning data in pipe
 load_clean <- load_RAW %>%
   mutate(date = ymd(date)) %>%  ## create date object
   mutate(daily_average = rowMeans(select(., h1:h24))) %>% # transforming hourly data into daily data
   select(-h1:-h24) %>% # dropping hourly columns
-  select(-meter_id) ## drop meter ID
+  select(-meter_id)  ## drop meter ID
 
 
-## GO BAKC AND CHECK THIS CODE
+load_clean$daily_average <- na.approx(load_clean$daily_average)
+
 ## check for missing dates by creating dummy data frame for dates
 Days <- as.data.frame(seq.Date(from=as.Date("2005/01/01"),to=as.Date("2011/06/30"), by ="day"))
 colnames(Days) <- "date"
@@ -64,6 +52,7 @@ check_na <- is.na(date_check)
 colSums(check_na) 
 
 
+
 ```
 
 ```{r Create ts object, include=FALSE}
@@ -72,9 +61,8 @@ ts_load <- ts(load_clean[,2],  start=c(year(load_clean$date[1]),month(load_clean
 head(ts_load,15)
 tail(ts_load,15)  
 tsclean(ts_load)
-na.approx(ts_load)
-which(is.na(ts_load))
-print(ts_load[93])
+#na.approx(ts_load)
+#which(is.na(ts_load))
 ```
 
 ```{r Initial plots}
@@ -101,7 +89,7 @@ plot(decompose_load)
 #The ACF plot show a slow decay which is a sign of non-stationarity.
 
 #Creating non-seasonal residential price time series because some models can't handle seasonality
-deseasonal_allsectors_price <- seasadj(decompose_allsectors_price)  
+deseasonal_load <- seasadj(decompose_load)  
 
 ```
 
