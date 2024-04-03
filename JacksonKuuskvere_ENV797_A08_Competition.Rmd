@@ -27,6 +27,7 @@ library(smooth)
 library(dplyr)
 library(readr)
 library(readxl)
+library(zoo)
 
 ```
 
@@ -40,7 +41,8 @@ You can also embed plots, for example:
 load_RAW <- read_excel("./Data/load.xlsx",col_names=TRUE)
 humidity_RAW <- read_excel("./Data/relative_humidity.xlsx",col_names=TRUE)
 temperature_RAW <- read_excel("./Data/temperature.xlsx",col_names=TRUE)
-
+which(is.na(load_RAW))
+#na.approx(load_RAW)
 # cleaning data in pipe
 load_clean <- load_RAW %>%
   mutate(date = ymd(date)) %>%  ## create date object
@@ -61,57 +63,45 @@ date_check <-left_join(Days, load_clean, by="date")
 check_na <- is.na(date_check)
 colSums(check_na) 
 
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-
 
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-
-
+```{r Create ts object, include=FALSE}
+ts_load <- ts(load_clean[,2],  start=c(year(load_clean$date[1]),month(load_clean$date[1]),day(load_clean$date[1])),
+                           frequency=365)
+head(ts_load,15)
+tail(ts_load,15)  
+tsclean(ts_load)
+na.approx(ts_load)
+which(is.na(ts_load))
+print(ts_load[93])
 ```
 
-## Including Plots
+```{r Initial plots}
 
-You can also embed plots, for example:
+TS_Plot <- 
+  ggplot(load_clean, aes(x=date, y=daily_average)) +
+      geom_line()
+plot(TS_Plot)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-
-
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-
+#ACF and PACF plots
+par(mfrow=c(1,2))
+ACF_Plot <- Acf(load_clean$daily_average, lag = 40, plot = TRUE)
+PACF_Plot <- Pacf(load_clean$daily_average, lag = 40)
+par(mfrow=c(1,1))
 
 ```
+The initial plots show an weak exponential decay on the ACF and a strong correlation at lag 1 on the PACF. The TS plot shows at least two strong seasonal components; with seasonality within the years as well as seasonality within the months due to regular sinusoidal oscillations. 
 
-## Including Plots
+```{r}
+#Using R decompose function
+decompose_load <- decompose(ts_load[,"daily_average"],"additive")
+plot(decompose_load)
 
-You can also embed plots, for example:
+#The ACF plot show a slow decay which is a sign of non-stationarity.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-
+#Creating non-seasonal residential price time series because some models can't handle seasonality
+deseasonal_allsectors_price <- seasadj(decompose_allsectors_price)  
 
 ```
 
