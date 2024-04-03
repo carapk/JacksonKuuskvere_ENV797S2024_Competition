@@ -92,4 +92,132 @@ plot(decompose_load)
 deseasonal_load <- seasadj(decompose_load)  
 
 ```
+## Forecasting with Naive methods
+
+We will go over three naive methods.
+(a) Forecast using the arithmetic mean with function meanf() from package `forecast`.
+(b) Forecast using the naive method with function naive() from package `forecast`.
+(c) Forecast using the seasonal naive method with function snaive() from package `forecast`. You need to specify frequency when defining the ts object to be able to use this function.
+
+**y** ts object containing data needed to be forecasted
+**h** forecasting horizon, i.e., how many steps ahead do you want to forecast
+**level** Confidence level for prediction intervals
+
+
+```{r Naive Forecasts}
+#Model 1: Arithmetic mean on original data
+Model1 <- meanf(ts_load,h=30)
+summary(Model1)
+plot(Model1)
+
+#Model 2: Arithmetic mean on deseas data
+Model2 <- meanf(deseasonal_load,h=30)
+summary(Model2)
+plot(Model2)
+
+#Model 3: Seasonal naive on original data
+Model3 <- snaive(ts_load,h=30)
+summary(Model3)
+plot(Model3)
+
+#Model 4: Naive on deseas data
+Model4 <- naive(deseasonal_load,h=30)
+summary(Model4)
+plot(Model4)
+```
+
+## Forecasting with Simple Averaging Models
+
+The simple averaging techniques we will explore are the moving average and the exponential smoothing. The simple moving average can be obtained with function sma() from package `smooth`. The main arguments function sma() will take are:
+
+**y** ts object containing data needed to be forecasted
+**order** order of simple moving average. If you don't specify, R will find the best order for you
+**h** forecasting horizon, i.e., how many steps ahead do you want to forecast
+**holdout** If TRUE, the last **h** observations are taken from the end of the data. One reason to holdout some data is to check model performance. We will talk about that on M9.
+**silent** if FALSE, no output will be generated
+**level** Confidence level for prediction intervals
+
+
+The simple exponential smoothing can be obtained with the ses() function also from package `forecast`. The main arguments function ses() will take are:
+
+**y** ts object containing data needed to be forecasted
+**alpha** the smoothing constant. If you don't specify, R will find the best alpha for you. 
+**h** forecasting horizon, i.e., how many steps ahead do you want to forecast
+**holdout** If TRUE, the last **h** observations are taken from the end of the data. One reason to holdout some data is to check model performance. We will talk about that on M9.
+**silent** if FALSE, no output will be generated
+**level** Confidence level for prediction intervals
+
+
+We will try these models on the original dataset and the deaseason electricity price.
+
+```{r Simple Average Forecasts}
+# Model 5: Simple moving average on deseasonal data
+Model5 <- sma(deseasonal_load,h=30) #,holdout = TRUE)
+#summary(Model5)
+autoplot(deseasonal_load,series="Deseasonal")+
+  autolayer(Model5$forecast,series="SMA")
+
+# Model 6: Simple moving average on original data
+Model6 <- sma(ts_load,h=30)
+#summary(Model6)
+autoplot(ts_load,
+         series="Original")+
+  autolayer(Model6$forecast,series="SMA-Model6")
+
+
+# Model 7:  Simple exponential smoothing on deseasonal data
+Model7 <- ses(deseasonal_load,h=30)
+plot(Model7)
+#autoplot(deseasonal_load,
+#         series="Deseasonal")+
+#  autolayer(Model7$??,series="ES-Model7")
+
+
+# Model 8:  Simple exponential smoothing on original data
+Model8 <- ses(ts_load,h=30)
+plot(Model8)
+
+autoplot(ts_load,
+         series="Original")+
+  autolayer(Model8$fitted,series="ES-Model8")
+
+
+```
+
+
+## Forecasting with ARIMA
+
+When forecasting with ARIMA models, first you will need to fit the model with the auto.arima() function we studied on M6 and M7. Then you will need to use the forecast() function from package `forecast`. forecast() is a generic function for forecasting from time series or time series models. It takes two main arguments:
+
+**object** 	a time series or time series model for which forecasts are required;
+**h** forecasting horizon, i.e., how many steps ahead do you want to forecast.
+
+```{r}
+
+# Model 9:  SARIMA on original data
+Model9 <- auto.arima(ts_load)
+
+Model9_for <- forecast(Model9,h=30)
+plot(Model9_for)
+
+autoplot(ts_load,
+         series="Original")+
+  autolayer(Model9$fitted,series="SARIMA")+
+  autolayer(Model9_for$mean,series="SARIMA_for")
+
+
+# Model 10:  ARIMA on deseasonal data
+Model10 <- auto.arima(deseasonal_load, seasonal = FALSE)
+
+Model10_for <- forecast(Model10,h=12)
+plot(Model10_for)
+
+autoplot(deseasonal_load,
+         series="Deseasonal")+
+  autolayer(Model10$fitted,series="ARIMA")+
+  autolayer(Model10_for$mean,series="ARIMA_for")
+
+
+```
+
 
