@@ -1,0 +1,96 @@
+---
+title: "TSA: Forecasting Competition Instructions"
+author: "Luana Lima"
+date: "03/20/2024"
+output: pdf_document
+always_allow_html: true
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+## CREATE A REPOSITORY IN YOUR GITHUB ACCOUNT
+
+1. Go to your user account on GitHub an navigate to the repositories tab. 
+
+3. In the upper right corner, click the green "New" button. 
+
+4. Name your repository with recommended naming conventions (suggestion: *Lastname1Lastname2_ENV797_TSA_Competition_S2024*). Write a short description of the purpose of the repository. Check the box to initialize the repository with a README. Add a .gitignore for R and add a GNU General Public License v3.0.
+
+5. Invite other group members as collaborators to the repository.
+
+## LINK YOUR REPO TO YOUR LOCAL DRIVE WITH RSTUDIO
+ 
+1. Click the "Clone or download" button for your repository and then the "copy" icon. Make sure the box header lists "Clone with HTTPS" rather than "Clone with SSH." If not, click the "Use HTTPS" button and then copy the link.
+
+2. Launch RStudio and select "New Project" from the File menu. Choose "Version Control" and "Git."
+
+3. Paste the repository URL and give your repository a name and a file path.
+
+## ENTER THE KAGGLE COMPETITION
+
+I created a kaggle competition for this assignment. This is not a public competition, it's an invitation only competition. You will need to enter the competition using this
+[invitation](https://www.kaggle.com/t/7c42475e0e62412ea7e7ffb30affee1f).  
+
+## DOWNLOAD THE DATASET
+
+You should download the data set from Kaggle platform. You will find three datasets one with hourly demand, one with hourly temperature and one with hourly relative humidity from January 2005 to June 2011. Note the way the data is presented is different.
+
+Your goal is to forecast **daily** load for July 2011 based on this historical data. You may or may not use the temperature and relative humidity in your models. The temperature and humidity measurement are from stations close to the household meter data you have.
+
+## WRANGLE/PROCESS THE DATASET
+
+You will need to transform hourly data into daily data. See the Rmd file from Lesson 11 for instruction on how to aggregate your dataset using pipes. You should take the **average** of the 24 hours to obtain the daily averages.
+
+## CREATE A TIME SERIES OBJECT
+
+After you process your dataset use the `msts()` function to create a time series object. You need to use `msts()` instead of `ts()` because your daily data will have more than one seasonal component.After you process your dataset use the `msts()` function to create a time series object.
+
+## FIT MODELS TO YOUR DATA
+
+Fit models to your dataset considering the period Jan 1st 2005 to May 31st 2011. 
+
+## FORECAST DAILY DEMAND FOR JUNE 2011 
+
+Using the models from previous section, forecast daily demand for the period June 1st 2011 to June 30th 2011. Based on the models you developed which model(s) is(are) generating good forecasts? Use performance criteria MAPE (Mean Average Percentage Error) to rank/select models.
+
+You may use different forecasting windows for model selection. For example you might want to see the model behavior when forecasting July of 2010. 
+
+## FORECAST DAILY DEMAND FOR JULY 2011
+
+Just for the good/selected model(s) you will **re-run** the model but now using the entire dataset all the way to June 30th 2011. Then forecast Jan 1st 2011 to Jan 31st 2011.
+
+## CREATE AN EXCEL FILE WITH FORECAST
+
+Look at the excel file in your Output folder name "submission_template.csv". You will need to create your own output file with forecast for July 2011. Your file needs to be in the format of the submission template. If your forecast is a probability distribution function, consider the mean to be the point forecast.
+
+## SUBMIT FORECAST TO KAGGLE
+
+You will need to submit your group's solution using this [link][
+https://www.kaggle.com/competitions/tsa-s24-competition].
+
+## COMPLETE YOUR PROJECT REPORT
+
+For the project report you only need to organize your current Rmd file. Make sure you follow the guidelines and you provide a link to you Github repository.
+
+1. Write in scientific style, not narrative style.
+
+2. [Global options for R chunks](https://rmarkdown.rstudio.com/lesson-3.html) should be set so that only relevant output is displayed. Turn on/off messages and warnings when applicable to avoid unnecessary outputs on the pdf.
+
+3. Make sure your final knitted PDF looks professional. Format tables, size figures, chapters, etc.
+
+4. Make sure the PDF file has the file name "Lastname1Lastname2_ENV797_A08_Competition.pdf" and submit it to Sakai under A08 - part III. You will only submit your PDF file.
+
+
+## GRADING RUBRIC
+
+You will be graded based on how much time and effort you put into the competition and your ability to fit a model to the data set. More specifically I will look into:
+
+1. number of commitments to Github repo, this item will show how the team interacted and how much you worked on the competition;
+
+2. number of submissions to Kaggle platform, this will show how many models you tried and it's also an indication of how much effort the team put into the project;
+
+3. ability to beat the vanilla/benchmark model, this will show your forecasting skills. 
+
+The team that is leading the board when the competition ends will get extra points, but they still need to get good scores on 1 and 2. 
