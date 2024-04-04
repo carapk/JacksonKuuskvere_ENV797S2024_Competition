@@ -53,17 +53,27 @@ colSums(check_na)
 
 ```
 
-```{r Create ts object, include=FALSE}
+```{r}
+load_clean_train <- load_clean %>% 
+  filter(date<"2011-06-01")
 
-# creating time series object for daily data
-ts_load <- ts(load_clean[,2],  start=c(year(load_clean$date[1]),month(load_clean$date[1]),day(load_clean$date[1])),
-                           frequency=365)
-head(ts_load,15)
-tail(ts_load,15)  
-tsclean(ts_load)
-#na.approx(ts_load)
-#which(is.na(ts_load))
+load_clean_test <- load_clean %>% 
+  filter(date >="2011-06-01")
+
 ```
+
+```{r TS Objects}
+load_ts <- ts(load_clean$daily_average, start = c(2005, 1), frequency = 365)
+plot(load_ts)
+
+train_ts <- ts(load_clean_train$daily_average, start = c(2005, 1), frequency = 365)
+plot(train_ts)
+
+test_ts <- ts(load_clean_test$daily_average, start = c(2011, 6), frequency = 365)
+plot(test_ts)
+```
+
+
 
 ```{r Initial plots}
 #Plot of TS data
@@ -83,7 +93,7 @@ The initial plots show an weak exponential decay on the ACF and a strong correla
 
 ```{r}
 #Using R decompose function
-decompose_load <- decompose(ts_load[,"daily_average"],"additive")
+decompose_load <- decompose(load_ts,"additive")
 plot(decompose_load)
 
 #The ACF plot show a slow decay which is a sign of non-stationarity.
@@ -91,7 +101,28 @@ plot(decompose_load)
 #Creating non-seasonal residential price time series because some models can't handle seasonality
 deseasonal_load <- seasadj(decompose_load)  
 
+
+#Using R decompose function
+#decompose_test <- decompose(test_ts,"additive")
+#plot(decompose_test)
+
+#The ACF plot show a slow decay which is a sign of non-stationarity.
+
+#Creating non-seasonal residential price time series because some models can't handle seasonality
+#deseasonal_test <- seasadj(decompose_test)  
+
+#Using R decompose function
+decompose_train <- decompose(train_ts,"additive")
+plot(decompose_train)
+
+#The ACF plot show a slow decay which is a sign of non-stationarity.
+
+#Creating non-seasonal residential price time series because some models can't handle seasonality
+deseasonal_train <- seasadj(decompose_train)  
+
+
 ```
+
 ## Forecasting with Naive methods
 
 We will go over three naive methods.
@@ -104,12 +135,40 @@ We will go over three naive methods.
 **level** Confidence level for prediction intervals
 
 
-```{r Naive Forecasts}
-#Model 1: Arithmetic mean on original data
-Model1 <- meanf(ts_load,h=30)
+```{r Naive Forecast}
+#Model 1: Arithmetic mean on training data
+Model1 <- meanf(train_ts,h=30)
 summary(Model1)
 plot(Model1)
 
+# Forecast using Model1 on training
+forecasted_Model1 <- forecast(Model1, h = 30)
+
+# Extract the forecasted values from training
+forecast_values_Model1 <- as.numeric(forecasted_Model1$mean)
+
+# Extract the actual values from the testing data
+actual_values_Model1 <- as.numeric(test_ts)
+
+# Compare the forecasted training values with the actual values
+comparison_Model1 <- data.frame(Actual = actual_values_Model1, Forecasted = forecast_values_Model1)
+
+#Model 1: Arithmetic mean on original data
+Model1_full <- meanf(load_ts,h=30)
+summary(Model1_full)
+#plot(Model1_full)
+
+# Forecast using Model1
+forecasted_Model1_full <- forecast(Model1_full, h = 30)
+
+# Extract the forecasted values
+forecast_values_Model1_full <- as.numeric(forecasted_Model1_full$mean)
+
+print(forecast_values_Model1_full)
+
+```
+
+```{r}
 #Model 2: Arithmetic mean on deseas data
 Model2 <- meanf(deseasonal_load,h=30)
 summary(Model2)
