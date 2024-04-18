@@ -51,6 +51,24 @@ date_check <-left_join(Days, load_clean, by="date")
 check_na <- is.na(date_check)
 colSums(check_na) 
 
+
+# cleaning data in pipe
+humidity_clean <- humidity_RAW %>%
+  mutate(date = ymd(date)) %>% ## create date object
+  mutate(hourly_average = rowMeans(select(., rh_ws1:rh_ws28))) %>% #1 col per hour
+  select(-rh_ws1:-rh_ws28) %>%  # dropping multiple obs
+  mutate(hourly_average= na.approx(hourly_average)) %>% 
+  pivot_wider(id_cols=date,
+              names_from = hr,
+              values_from = hourly_average,
+              names_prefix = "h") %>% 
+  mutate(daily_average = rowMeans(select(., h1:h24))) %>%# daily avg
+  mutate(daily_average= na.approx(daily_average)) %>% 
+  select(-h1:-h24) 
+
+check_na <- is.na(humidity_clean)
+colSums(check_na) 
+
 ```
 
 ```{r Cleaning}
@@ -413,3 +431,7 @@ print(forecast_values_Model10_full)
 ```
 
 Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model futher. 
+```{r}
+
+```
+
