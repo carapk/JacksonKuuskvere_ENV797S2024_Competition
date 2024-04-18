@@ -430,8 +430,20 @@ forecast_values_Model10_full <- as.numeric(forecasted_Model10_full$mean)
 print(forecast_values_Model10_full)
 ```
 
-Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model futher. 
-```{r}
+Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model further.
 
+## NEURAL NETWORKS 
+
+```{r NNETAR, echo=TRUE, message=FALSE, warning=FALSE}
+#You can play with the different values for p and P, you can also use xreg with Fourier term to model the multiple seasonality
+
+# Assuming humidity_clean is a dataframe with a column named daily_average containing humidity values
+humidity_matrix <- as.matrix(humidity_clean$daily_average)  # Extract and convert to matrix
+
+# Fit the neural network model
+NN_fit <- nnetar(load_ts, p = 1, P = 0, xreg = humidity_matrix)
+
+# Make forecasts using the fitted model
+NN_for <- forecast(NN_fit, h = 365, xreg = humidity_matrix)
 ```
 
