@@ -420,10 +420,6 @@ forecasted_Model10 <- forecast(Model10, h = 30)
 # Extract the forecasted values from training
 forecast_values_Model10 <- as.numeric(forecasted_Model10$mean)
 
-
-# Forecast using Model6
-forecasted_Model10_full <- forecast(load_ts, h = 31)
-
 # Extract the forecasted values
 forecast_values_Model10_full <- as.numeric(forecasted_Model10_full$mean)
 
@@ -434,16 +430,30 @@ Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate
 
 ## NEURAL NETWORKS 
 
+```{r Humidity Forecasts}
+humidity_ts <- ts(humidity_clean$daily_average, start=c(2005, 1), frequency = 365)
+humidity_forecast <- forecast(auto.arima(humidity_ts),h=31)
+humidity_july <- as.numeric(humidity_forecast$mean)
+```
+
+
 ```{r NNETAR, echo=TRUE, message=FALSE, warning=FALSE}
 #You can play with the different values for p and P, you can also use xreg with Fourier term to model the multiple seasonality
 
 # Assuming humidity_clean is a dataframe with a column named daily_average containing humidity values
 humidity_matrix <- as.matrix(humidity_clean$daily_average)  # Extract and convert to matrix
 
+
 # Fit the neural network model
 NN_fit <- nnetar(load_ts, p = 1, P = 0, xreg = humidity_matrix)
-
+summary(NN_fit)
 # Make forecasts using the fitted model
-NN_for <- forecast(NN_fit, h = 365, xreg = humidity_matrix)
+NN_for <- forecast(NN_fit, h = 31, xreg=humidity_july)
+
+
+# Extract the forecasted values
+NN_for_values <- as.numeric(NN_for$mean)
+
+print(NN_for_values)
 ```
 
