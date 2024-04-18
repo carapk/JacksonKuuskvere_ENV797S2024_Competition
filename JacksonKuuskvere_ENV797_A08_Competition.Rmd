@@ -5,7 +5,7 @@ date: "2024-03-28"
 output: pdf_document
 ---
 
-```{r setup}
+```{r setup and packages}
 library(lubridate)
 library(ggplot2)
 library(forecast)
@@ -53,7 +53,7 @@ colSums(check_na)
 
 ```
 
-```{r}
+```{r Cleaning}
 load_clean_train <- load_clean %>% 
   filter(date<"2011-06-01")
 
@@ -73,8 +73,6 @@ test_ts <- ts(load_clean_test$daily_average, start = c(2011, 6), frequency = 365
 plot(test_ts)
 ```
 
-
-
 ```{r Initial plots}
 #Plot of TS data
 TS_Plot <- 
@@ -91,7 +89,7 @@ par(mfrow=c(1,1))
 ```
 The initial plots show an weak exponential decay on the ACF and a strong correlation at lag 1 on the PACF. The TS plot shows at least two strong seasonal components; with seasonality within the years as well as seasonality within the months due to regular sinusoidal oscillations. 
 
-```{r}
+```{r Decomposition}
 #Using R decompose function
 decompose_load <- decompose(load_ts,"additive")
 plot(decompose_load)
@@ -113,29 +111,20 @@ deseasonal_load <- seasadj(decompose_load)
 
 #Using R decompose function
 decompose_train <- decompose(train_ts,"additive")
+decompose_test <- decompose(test_ts,"additive")
 plot(decompose_train)
 
 #The ACF plot show a slow decay which is a sign of non-stationarity.
 
 #Creating non-seasonal residential price time series because some models can't handle seasonality
 deseasonal_train <- seasadj(decompose_train)  
-
+deseasonal_test <- seasadj(decompose_test)  
 
 ```
 
 ## Forecasting with Naive methods
 
-We will go over three naive methods.
-(a) Forecast using the arithmetic mean with function meanf() from package `forecast`.
-(b) Forecast using the naive method with function naive() from package `forecast`.
-(c) Forecast using the seasonal naive method with function snaive() from package `forecast`. You need to specify frequency when defining the ts object to be able to use this function.
-
-**y** ts object containing data needed to be forecasted
-**h** forecasting horizon, i.e., how many steps ahead do you want to forecast
-**level** Confidence level for prediction intervals
-
-
-```{r Naive Forecast}
+```{r Model 1: Arithmetic mean on training data}
 #Model 1: Arithmetic mean on training data
 Model1 <- meanf(train_ts,h=30)
 summary(Model1)
@@ -168,21 +157,90 @@ print(forecast_values_Model1_full)
 
 ```
 
-```{r}
-#Model 2: Arithmetic mean on deseas data
-Model2 <- meanf(deseasonal_load,h=30)
+```{r Model 2: Arithmetic mean on deseasonalized data}
+# Model 2: Arithmetic mean on deseasonalized data
+Model2 <- meanf(deseasonal_train, h = 30)
 summary(Model2)
 plot(Model2)
 
-#Model 3: Seasonal naive on original data
-Model3 <- snaive(ts_load,h=30)
-summary(Model3)
-plot(Model3)
+# Forecast using Model2 on training
+forecasted_Model2 <- forecast(Model2, h = 30)
 
-#Model 4: Naive on deseas data
-Model4 <- naive(deseasonal_load,h=30)
+# Extract the forecasted values from training
+forecast_values_Model2 <- as.numeric(forecasted_Model2$mean)
+
+# Extract the actual values from the testing data
+actual_values_Model2 <- as.numeric(test_ts)
+#could not decompose the testing data since it had less than two periods, so just using testing regular
+
+# Compare the forecasted training values with the actual values
+comparison_Model2 <- data.frame(Actual = actual_values_Model2, Forecasted = forecast_values_Model2)
+
+# Forecast using Model2
+forecasted_Model2_full <- forecast(Model2_full, h = 31)
+
+# Extract the forecasted values
+forecast_values_Model2_full <- as.numeric(forecasted_Model2_full$mean)
+
+print(forecast_values_Model2_full)
+```
+
+```{r Model 3: Arithmetic mean on original data}
+
+#Model 3: Arithmetic mean on original data
+Model3_full <- meanf(train_ts,h=31)
+summary(Model3_full)
+
+#plot(Model3_full)
+# Forecast using Model3 on training
+forecasted_Model3 <- forecast(Model3, h = 30)
+
+# Extract the forecasted values from training
+forecast_values_Model3 <- as.numeric(forecasted_Model3$mean)
+
+# Extract the actual values from the testing data
+actual_values_Model3 <- as.numeric(test_ts)
+
+# Compare the forecasted training values with the actual values
+comparison_Model3 <- data.frame(Actual = actual_values_Model3, Forecasted = forecast_values_Model3)
+
+#Model 3: Arithmetic mean on original data
+Model3_full <- meanf(load_ts,h=31)
+summary(Model3_full)
+#plot(Model3_full)
+
+# Forecast using Model3
+forecasted_Model3_full <- forecast(Model3_full, h = 31)
+
+# Extract the forecasted values
+forecast_values_Model3_full <- as.numeric(forecasted_Model3_full$mean)
+
+print(forecast_values_Model3_full)
+
+```
+
+```{r Model 4: Naive on deseasonalized data}
+# Model 4: Naive on deseasonalized data
+Model4 <- naive(deseasonal_train, h = 31)
 summary(Model4)
 plot(Model4)
+
+# Forecast using Model4 on training
+forecasted_Model4 <- forecast(Model4, h = 31)
+
+# Extract the forecasted values from training
+forecast_values_Model4 <- as.numeric(forecasted_Model4$mean)
+
+# Compare the forecasted training values with the actual values
+comparison_Model4 <- data.frame(Actual = actual_values_Model4, Forecasted = forecast_values_Model4)
+
+# Forecast using Model4
+forecasted_Model4_full <- forecast(deseasonal_load, h = 31)
+
+# Extract the forecasted values
+forecast_values_Model4_full <- as.numeric(forecasted_Model4_full$mean)
+
+print(forecast_values_Model4_full)
 ```
 
 ## Forecasting with Simple Averaging Models
@@ -209,20 +267,63 @@ The simple exponential smoothing can be obtained with the ses() function also fr
 
 We will try these models on the original dataset and the deaseason electricity price.
 
-```{r Simple Average Forecasts}
+```{r Simple Average Forecasts Deseasonal SUBMITTED}
 # Model 5: Simple moving average on deseasonal data
-Model5 <- sma(deseasonal_load,h=30) #,holdout = TRUE)
+Model5 <- sma(deseasonal_load,h=30 ,holdout = TRUE)
 #summary(Model5)
-autoplot(deseasonal_load,series="Deseasonal")+
-  autolayer(Model5$forecast,series="SMA")
+#autoplot(deseasonal_load,series="Deseasonal")+
+#  autolayer(Model5$forecast,series="SMA")
 
+# Forecast using Model5 on training
+forecasted_Model5 <- forecast(Model5, h = 30)
+
+# Extract the forecasted values from training
+forecast_values_Model5 <- as.numeric(forecasted_Model5$mean)
+
+# Extract the actual values from the testing data
+actual_values_Model5 <- as.numeric(test_ts)
+
+# Compare the forecasted training values with the actual values
+#comparison_Model5 <- data.frame(Actual = actual_values_Model5, Forecasted = forecast_values_Model5)
+
+# Forecast using Model5
+forecasted_Model5_full <- forecast(deseasonal_load, h = 31)
+
+# Extract the forecasted values
+forecast_values_Model5_full <- as.numeric(forecasted_Model5_full$mean)
+
+print(forecast_values_Model5_full)
+
+```
+
+
+```{r SUBMITTED SMA Seasonal}
 # Model 6: Simple moving average on original data
-Model6 <- sma(ts_load,h=30)
+Model6 <- sma(load_ts,h=30)
 #summary(Model6)
-autoplot(ts_load,
-         series="Original")+
-  autolayer(Model6$forecast,series="SMA-Model6")
+#autoplot(load_ts,
+#         series="Original")+
+#  autolayer(Model6$forecast,series="SMA-Model6")
 
+# Forecast using Model6 on training
+forecasted_Model6 <- forecast(Model6, h = 30)
+
+# Extract the forecasted values from training
+forecast_values_Model6 <- as.numeric(forecasted_Model6$mean)
+
+# Extract the actual values from the testing data
+actual_values_Model6 <- as.numeric(test_ts)
+
+# Forecast using Model6
+forecasted_Model6_full <- forecast(load_ts, h = 31)
+
+# Extract the forecasted values
+forecast_values_Model6_full <- as.numeric(forecasted_Model6_full$mean)
+
+print(forecast_values_Model6_full)
+```
+
+```{r}
 
 # Model 7:  Simple exponential smoothing on deseasonal data
 Model7 <- ses(deseasonal_load,h=30)
@@ -251,32 +352,64 @@ When forecasting with ARIMA models, first you will need to fit the model with th
 **object** 	a time series or time series model for which forecasts are required;
 **h** forecasting horizon, i.e., how many steps ahead do you want to forecast.
 
-```{r}
+```{r AUTO SARIMA Submission 6}
 
 # Model 9:  SARIMA on original data
-Model9 <- auto.arima(ts_load)
+Model9 <- auto.arima(train_ts)
 
-Model9_for <- forecast(Model9,h=30)
-plot(Model9_for)
+#Model9_for <- forecast(Model9,h=30)
+#plot(Model9_for)
 
-autoplot(ts_load,
-         series="Original")+
-  autolayer(Model9$fitted,series="SARIMA")+
-  autolayer(Model9_for$mean,series="SARIMA_for")
+#autoplot(ts_load,
+#         series="Original")+
+#  autolayer(Model9$fitted,series="SARIMA")+
+#  autolayer(Model9_for$mean,series="SARIMA_for")
 
+# Forecast using Model9 on training
+forecasted_Model9 <- forecast(Model9, h = 30)
 
-# Model 10:  ARIMA on deseasonal data
-Model10 <- auto.arima(deseasonal_load, seasonal = FALSE)
+# Extract the forecasted values from training
+forecast_values_Model9 <- as.numeric(forecasted_Model9$mean)
 
-Model10_for <- forecast(Model10,h=12)
-plot(Model10_for)
+# Extract the actual values from the testing data
+actual_values_Model9 <- as.numeric(test_ts)
 
-autoplot(deseasonal_load,
-         series="Deseasonal")+
-  autolayer(Model10$fitted,series="ARIMA")+
-  autolayer(Model10_for$mean,series="ARIMA_for")
+# Forecast using Model6
+forecasted_Model9_full <- forecast(load_ts, h = 31)
 
+# Extract the forecasted values
+forecast_values_Model9_full <- as.numeric(forecasted_Model9_full$mean)
+
+print(forecast_values_Model9_full)
 
 ```
 
+```{r}
+# Model 10:  ARIMA on deseasonal data
+Model10 <- auto.arima(deseasonal_train, seasonal = FALSE)
 
+Model10_for <- forecast(Model10,h=12)
+#plot(Model10_for)
+
+#autoplot(deseasonal_load,
+#         series="Deseasonal")+
+#  autolayer(Model10$fitted,series="ARIMA")+
+#  autolayer(Model10_for$mean,series="ARIMA_for")
+
+# Forecast using Model10 on training
+forecasted_Model10 <- forecast(Model10, h = 30)
+
+# Extract the forecasted values from training
+forecast_values_Model10 <- as.numeric(forecasted_Model10$mean)
+
+
+# Forecast using Model6
+forecasted_Model10_full <- forecast(load_ts, h = 31)
+
+# Extract the forecasted values
+forecast_values_Model10_full <- as.numeric(forecasted_Model10_full$mean)
+
+print(forecast_values_Model10_full)
+```
+
+Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model futher. 
