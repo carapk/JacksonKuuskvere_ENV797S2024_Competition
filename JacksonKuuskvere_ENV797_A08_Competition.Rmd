@@ -18,39 +18,49 @@ library(dplyr)
 library(readr)
 library(readxl)
 library(zoo)
-
 ```
 
 ## Data
-
-```{r data, echo=FALSE}
-
-# loading data
+```{r loading data}
+# loading all data
 load_RAW <- read_excel("./Data/load.xlsx",col_names=TRUE,na="NA")
 humidity_RAW <- read_excel("./Data/relative_humidity.xlsx",col_names=TRUE)
 temperature_RAW <- read_excel("./Data/temperature.xlsx",col_names=TRUE)
+```
 
+```{r cleaning load data, echo=FALSE}
+# LOAD DATA
 # cleaning data in pipe
 load_clean <- load_RAW %>%
   mutate(date = ymd(date)) %>%  ## create date object
-  mutate(daily_average = rowMeans(select(., h1:h24))) %>% # transforming hourly data into daily data
+  mutate(daily_average = 
+           rowMeans(select(., h1:h24))) %>% 
+            # transforming hourly data into daily data
   select(-h1:-h24) %>% # dropping hourly columns
-  select(-meter_id)  ## drop meter ID
-
-# interpolating N/A values with na.approx
-load_clean$daily_average <- na.approx(load_clean$daily_average)
+  select(-meter_id) %>% ## drop meter ID
+  mutate(daily_average = 
+           na.approx(load_clean$daily_average)) 
+            # interpolating N/A values with na.approx
 
 # check for missing dates by creating dummy data frame for dates
-Days <- as.data.frame(seq.Date(from=as.Date("2005/01/01"),to=as.Date("2011/06/30"), by ="day"))
+Days <- as.data.frame(seq.Date(from=as.Date("2005/01/01"),
+                               to=as.Date("2011/06/30"), by ="day"))
 colnames(Days) <- "date"
 
 #merge with the data with missing rows
 date_check <-left_join(Days, load_clean, by="date")
 
-# checking N/As
+# checking to ensure no N/As in load data
 check_na <- is.na(date_check)
 colSums(check_na) 
+```
 
+```{r cleaning humidity data, echo=FALSE}
+# HUMIDITY DATA
+
+# checking for missing values in raw data
+check_na_humid <- is.na(humidity_RAW)
+colSums(check_na_humid)
 
 # cleaning data in pipe
 humidity_clean <- humidity_RAW %>%
@@ -66,79 +76,104 @@ humidity_clean <- humidity_RAW %>%
   mutate(daily_average= na.approx(daily_average)) %>% 
   select(-h1:-h24) 
 
+# verifying clean dataset has no N/As
 check_na <- is.na(humidity_clean)
 colSums(check_na) 
-
 ```
 
-```{r Cleaning}
+```{r cleaning temperature data, echo=FALSE}
+# TEMPERATURE DATA
+
+# checking for missing values in raw data
+check_na_temp <- is.na(temperature_RAW)
+colSums(check_na_temp)
+
+# cleaning data in pipe
+temperature_clean <- temperature_RAW %>%
+  drop_na() %>% # dropping last row of data - contains N/As and does not have a date associated with it
+  mutate(date = ymd(date)) %>% ## creating date object
+  mutate(hourly_average = rowMeans(select(.,t_ws1:t_ws28))) %>% # creating hourly average 
+  select(-t_ws1:-t_ws28) %>% # dropping hourly observation columns 1-28
+  mutate(hourly_average= na.approx(hourly_average)) %>% # approximating N/As
+  pivot_wider(id_cols=date, # making hourly rows into columns
+              names_from = hr,
+              values_from = hourly_average,
+              names_prefix = "h") %>% 
+  mutate(daily_average = rowMeans(select(., h1:h24))) %>%# daily avgerage
+  mutate(daily_average= na.approx(daily_average)) %>%
+  select(-h1:-h24)
+
+# verifying clean dataset has no N/As
+check_na_temp <- is.na(temperature_clean)
+colSums(check_na_temp)
+```
+
+```{r train and test}
+# aeparating data into values for training and testing
+# training dataset starts 2005/01/01 and ends 2011/01/05
 load_clean_train <- load_clean %>% 
   filter(date<"2011-06-01")
 
+# testing dataset starts 2011/01/06 and ends 2011/06/30
 load_clean_test <- load_clean %>% 
   filter(date >="2011-06-01")
 
 ```
 
+## Time Series
 ```{r TS Objects}
+# creating time series object for full load data
 load_ts <- ts(load_clean$daily_average, start = c(2005, 1), frequency = 365)
 plot(load_ts)
 
+# creating time series object for training data
 train_ts <- ts(load_clean_train$daily_average, start = c(2005, 1), frequency = 365)
 plot(train_ts)
 
+# creating time series object for testing data
 test_ts <- ts(load_clean_test$daily_average, start = c(2011, 6), frequency = 365)
 plot(test_ts)
 ```
 
 ```{r Initial plots}
-#Plot of TS data
+# creating initial plots of time series data
+# plot of TS data
 TS_Plot <- 
   ggplot(load_clean, aes(x=date, y=daily_average)) +
       geom_line()
 plot(TS_Plot)
 
-#ACF and PACF plots
+# ACF and PACF plots
 par(mfrow=c(1,2))
 ACF_Plot <- Acf(load_clean$daily_average, lag = 40, plot = TRUE)
+#ACF plot shows a slow decay which is a sign of non-stationarity
 PACF_Plot <- Pacf(load_clean$daily_average, lag = 40)
+#PACF plot is significant at lag 1
 par(mfrow=c(1,1))
 
 ```
 The initial plots show an weak exponential decay on the ACF and a strong correlation at lag 1 on the PACF. The TS plot shows at least two strong seasonal components; with seasonality within the years as well as seasonality within the months due to regular sinusoidal oscillations. 
 
 ```{r Decomposition}
-#Using R decompose function
+# decomposing load data with R's decompose function
 decompose_load <- decompose(load_ts,"additive")
 plot(decompose_load)
-
-#The ACF plot show a slow decay which is a sign of non-stationarity.
 
 #Creating non-seasonal residential price time series because some models can't handle seasonality
 deseasonal_load <- seasadj(decompose_load)  
 
-
-#Using R decompose function
-#decompose_test <- decompose(test_ts,"additive")
-#plot(decompose_test)
-
-#The ACF plot show a slow decay which is a sign of non-stationarity.
-
-#Creating non-seasonal residential price time series because some models can't handle seasonality
-#deseasonal_test <- seasadj(decompose_test)  
-
-#Using R decompose function
+#decomposing training data
 decompose_train <- decompose(train_ts,"additive")
-decompose_test <- decompose(test_ts,"additive")
 plot(decompose_train)
 
-#The ACF plot show a slow decay which is a sign of non-stationarity.
+# cannot decompose testing data because it has less than 2 periods
+# decompose_test <- decompose(test_ts,"additive") 
 
 #Creating non-seasonal residential price time series because some models can't handle seasonality
-deseasonal_train <- seasadj(decompose_train)  
-deseasonal_test <- seasadj(decompose_test)  
+deseasonal_train <- seasadj(decompose_train)
 
 ```
+Decomposed data shows an increasing trend line and a strong seasonal component from the consistent wave-like pattern. Residuals do not exhibit any clear patterns.
 
 ## Forecasting with Naive methods
 
@@ -163,7 +198,6 @@ comparison_Model1 <- data.frame(Actual = actual_values_Model1, Forecasted = fore
 #Model 1: Arithmetic mean on original data
 Model1_full <- meanf(load_ts,h=30)
 summary(Model1_full)
-#plot(Model1_full)
 
 # Forecast using Model1
 forecasted_Model1_full <- forecast(Model1_full, h = 30)
@@ -171,6 +205,7 @@ forecasted_Model1_full <- forecast(Model1_full, h = 30)
 # Extract the forecasted values
 forecast_values_Model1_full <- as.numeric(forecasted_Model1_full$mean)
 
+# printing forecasted values
 print(forecast_values_Model1_full)
 
 ```
@@ -194,8 +229,13 @@ actual_values_Model2 <- as.numeric(test_ts)
 # Compare the forecasted training values with the actual values
 comparison_Model2 <- data.frame(Actual = actual_values_Model2, Forecasted = forecast_values_Model2)
 
+#Model 2: Arithmetic mean on original data
+Model2_full <- meanf(load_ts,h=30)
+summary(Model2_full)
+#plot(Model2_full)
+
 # Forecast using Model2
-forecasted_Model2_full <- forecast(Model2_full, h = 31)
+forecasted_Model2_full <- forecast(Model2_full, h = 30)
 
 # Extract the forecasted values
 forecast_values_Model2_full <- as.numeric(forecasted_Model2_full$mean)
@@ -205,11 +245,11 @@ print(forecast_values_Model2_full)
 
 ```{r Model 3: Arithmetic mean on original data}
 
-#Model 3: Arithmetic mean on original data
-Model3_full <- meanf(train_ts,h=31)
-summary(Model3_full)
+#Model 3: Arithmetic mean on training data
+Model3 <- meanf(train_ts,h=31)
+summary(Model3)
+plot(Model3)
 
-#plot(Model3_full)
 # Forecast using Model3 on training
 forecasted_Model3 <- forecast(Model3, h = 30)
 
@@ -225,7 +265,7 @@ comparison_Model3 <- data.frame(Actual = actual_values_Model3, Forecasted = fore
 #Model 3: Arithmetic mean on original data
 Model3_full <- meanf(load_ts,h=31)
 summary(Model3_full)
-#plot(Model3_full)
+plot(Model3_full)
 
 # Forecast using Model3
 forecasted_Model3_full <- forecast(Model3_full, h = 31)
@@ -249,6 +289,9 @@ forecasted_Model4 <- forecast(Model4, h = 31)
 # Extract the forecasted values from training
 forecast_values_Model4 <- as.numeric(forecasted_Model4$mean)
 
+# Extract the actual values from the testing data
+actual_values_Model4 <- as.numeric(test_ts)
+
 # Compare the forecasted training values with the actual values
 comparison_Model4 <- data.frame(Actual = actual_values_Model4, Forecasted = forecast_values_Model4)
 
@@ -265,9 +308,6 @@ print(forecast_values_Model4_full)
 ```{r Simple Average Forecasts Deseasonal SUBMITTED}
 # Model 5: Simple moving average on deseasonal data
 Model5 <- sma(deseasonal_load,h=30 ,holdout = TRUE)
-#summary(Model5)
-#autoplot(deseasonal_load,series="Deseasonal")+
-#  autolayer(Model5$forecast,series="SMA")
 
 # Forecast using Model5 on training
 forecasted_Model5 <- forecast(Model5, h = 30)
@@ -279,7 +319,7 @@ forecast_values_Model5 <- as.numeric(forecasted_Model5$mean)
 actual_values_Model5 <- as.numeric(test_ts)
 
 # Compare the forecasted training values with the actual values
-#comparison_Model5 <- data.frame(Actual = actual_values_Model5, Forecasted = forecast_values_Model5)
+comparison_Model5 <- data.frame(Actual = actual_values_Model5, Forecasted = forecast_values_Model5)
 
 # Forecast using Model5
 forecasted_Model5_full <- forecast(deseasonal_load, h = 31)
@@ -292,13 +332,9 @@ print(forecast_values_Model5_full)
 ```
 
 
-```{r SUBMITTED SMA Seasonal}
+```{r SMA Seasonal}
 # Model 6: Simple moving average on original data
 Model6 <- sma(load_ts,h=30)
-#summary(Model6)
-#autoplot(load_ts,
-#         series="Original")+
-#  autolayer(Model6$forecast,series="SMA-Model6")
 
 # Forecast using Model6 on training
 forecasted_Model6 <- forecast(Model6, h = 30)
@@ -318,19 +354,10 @@ forecast_values_Model6_full <- as.numeric(forecasted_Model6_full$mean)
 print(forecast_values_Model6_full)
 ```
 
-
-```{r AUTO SARIMA Submission 6}
+```{r AUTO SARIMA}
 
 # Model 9:  SARIMA on original data
 Model9 <- auto.arima(train_ts)
-
-#Model9_for <- forecast(Model9,h=30)
-#plot(Model9_for)
-
-#autoplot(ts_load,
-#         series="Original")+
-#  autolayer(Model9$fitted,series="SARIMA")+
-#  autolayer(Model9_for$mean,series="SARIMA_for")
 
 # Forecast using Model9 on training
 forecasted_Model9 <- forecast(Model9, h = 30)
@@ -355,7 +382,7 @@ print(forecast_values_Model9_full)
 # Model 10:  ARIMA on deseasonal data
 Model10 <- auto.arima(deseasonal_train, seasonal = FALSE)
 
-Model10_for <- forecast(Model10,h=12)
+#Model10_for <- forecast(Model10,h=12)
 #plot(Model10_for)
 
 #autoplot(deseasonal_load,
@@ -385,13 +412,11 @@ humidity_forecast <- forecast(auto.arima(humidity_ts),h=31)
 humidity_july <- as.numeric(humidity_forecast$mean)
 ```
 
-
-```{r NNETAR, echo=TRUE, message=FALSE, warning=FALSE}
+```{r NNETAR1, echo=TRUE, message=FALSE, warning=FALSE}
 #You can play with the different values for p and P, you can also use xreg with Fourier term to model the multiple seasonality
 
 # Assuming humidity_clean is a dataframe with a column named daily_average containing humidity values
 humidity_matrix <- as.matrix(humidity_clean$daily_average)  # Extract and convert to matrix
-
 
 # Fit the neural network model
 NN_fit <- nnetar(load_ts, p = 1, P = 0, xreg = humidity_matrix)
@@ -399,10 +424,49 @@ summary(NN_fit)
 # Make forecasts using the fitted model
 NN_for <- forecast(NN_fit, h = 31, xreg=humidity_july)
 
-
 # Extract the forecasted values
 NN_for_values <- as.numeric(NN_for$mean)
 
 print(NN_for_values)
 ```
 
+```{r Temperature Forecasts}
+temperature_ts <- ts(temperature_clean$daily_average, start=c(2005, 1), frequency = 365)
+temperature_forecast <- forecast(auto.arima(temperature_ts),h=31)
+temperature_july <- as.numeric(temperature_forecast$mean)
+```
+
+```{r NNETAR2, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Assuming temperature_clean is a dataframe with a column named daily_average containing humidity values
+temperature_matrix <- as.matrix(temperature_clean$daily_average)  # Extract and convert to matrix
+
+# Fit the neural network model
+NN_fit_temp <- nnetar(load_ts, p = 1, P = 0, xreg = temperature_matrix)
+summary(NN_fit_temp)
+
+# Make forecasts using the fitted model
+NN_temp_for <- forecast(NN_fit_temp, h = 31, xreg=temperature_july)
+
+# Extract the forecasted values
+NN_temp_for_values <- as.numeric(NN_temp_for$mean)
+
+print(NN_temp_for_values)
+```
+
+```{r NNETAR3, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Fit the neural network model using temperature and humidity 
+NN_fit_temp_hum <- nnetar(load_ts, p = 1, P = 0, xreg = cbind(temperature_matrix, 
+                                                              humidity_matrix))
+summary(NN_fit_temp_hum)
+
+# Make forecasts using the fitted model
+NN_temp_hum_for <- forecast(NN_fit_temp_hum, h = 31, xreg = 
+                              cbind(temperature_july,humidity_july))
+
+# Extract the forecasted values
+NN_temp_hum_for_values <- as.numeric(NN_temp_hum_for$mean)
+
+print(NN_temp_hum_for_values)
+```
