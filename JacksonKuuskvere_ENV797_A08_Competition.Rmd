@@ -475,9 +475,13 @@ print(NN_temp_hum_for_values)
 
 ```{r TBATs}
 # TBATS can take time to fit
-TBATS_fit <- tbats(load_ts, xreg=c(temperature_matrix, humidity_matrix))
+TBATS_fit <- tbats(load_ts, xreg=cbind(temperature_matrix, humidity_matrix))
 
 TBATS_for <- forecast(TBATS_fit, h=31)
+
+TBATs_values <- as.numeric(TBATS_for$mean)
+
+print(TBATs_values)
 
 ```
 
