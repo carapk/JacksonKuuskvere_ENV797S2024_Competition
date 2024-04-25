@@ -5,6 +5,9 @@ date: "2024-03-28"
 output: pdf_document
 ---
 
+```{r setup, echo=TRUE, message=FALSE, warning=FALSE}
+```
+
 ```{r setup and packages}
 library(lubridate)
 library(ggplot2)
@@ -307,7 +310,7 @@ print(forecast_values_Model4_full)
 ```
 
 
-```{r Simple Average Forecasts Deseasonal SUBMITTED}
+```{r Model 5: Simple Average Forecasts Deseasonal}
 # Model 5: Simple moving average on deseasonal data
 Model5 <- sma(deseasonal_load,h=30 ,holdout = TRUE)
 
@@ -334,7 +337,7 @@ print(forecast_values_Model5_full)
 ```
 
 
-```{r SMA Seasonal}
+```{r Model 6: SMA Seasonal}
 # Model 6: Simple moving average on original data
 Model6 <- sma(load_ts,h=30)
 
@@ -356,55 +359,44 @@ forecast_values_Model6_full <- as.numeric(forecasted_Model6_full$mean)
 print(forecast_values_Model6_full)
 ```
 
-```{r AUTO SARIMA}
+```{r Model 7: AUTO SARIMA}
 
-# Model 9:  SARIMA on original data
-Model9 <- auto.arima(train_ts)
+# Model 7:  SARIMA on original data
+Model7 <- auto.arima(train_ts)
 
-# Forecast using Model9 on training
-forecasted_Model9 <- forecast(Model9, h = 30)
+# Forecast using Model7 on training
+forecasted_Model7 <- forecast(Model7, h = 30)
 
 # Extract the forecasted values from training
-forecast_values_Model9 <- as.numeric(forecasted_Model9$mean)
+forecast_values_Model7 <- as.numeric(forecasted_Model7$mean)
 
 # Extract the actual values from the testing data
-actual_values_Model9 <- as.numeric(test_ts)
+actual_values_Model7 <- as.numeric(test_ts)
 
 # Forecast using Model6
-forecasted_Model9_full <- forecast(load_ts, h = 31)
+forecasted_Model7_full <- forecast(load_ts, h = 31)
 
 # Extract the forecasted values
-forecast_values_Model9_full <- as.numeric(forecasted_Model9_full$mean)
+forecast_values_Model7_full <- as.numeric(forecasted_Model7_full$mean)
 
-print(forecast_values_Model9_full)
+print(forecast_values_Model7_full)
 
 ```
 
-```{r Auto ARIMA on deseasonal data SUBMITTED - submission 7}
-# Model 10:  ARIMA on deseasonal data
-Model10 <- auto.arima(deseasonal_train, seasonal = FALSE)
+```{r Model 8: Auto ARIMA on deseasonal data}
+# Model 8:  ARIMA on deseasonal data
+Model8 <- auto.arima(deseasonal_train, seasonal = FALSE)
 
-#Model10_for <- forecast(Model10,h=12)
-#plot(Model10_for)
-
-#autoplot(deseasonal_load,
-#         series="Deseasonal")+
-#  autolayer(Model10$fitted,series="ARIMA")+
-#  autolayer(Model10_for$mean,series="ARIMA_for")
-
-# Forecast using Model10 on training
-forecasted_Model10 <- forecast(Model10, h = 30)
+# Forecast using Model8 on training
+forecasted_Model8 <- forecast(Model8, h = 30)
 
 # Extract the forecasted values from training
-forecast_values_Model10 <- as.numeric(forecasted_Model10$mean)
+forecast_values_Model8 <- as.numeric(forecasted_Model8$mean)
 
-# Extract the forecasted values
-#forecast_values_Model10_full <- as.numeric(forecasted_Model10_full$mean)
-
-#print(forecast_values_Model10_full)
+print(forecast_values_Model8)
 ```
 
-Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model further.
+Models 6, 7 and 8 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model further.
 
 ## NEURAL NETWORKS 
 
@@ -414,11 +406,12 @@ humidity_forecast <- forecast(auto.arima(humidity_ts),h=31)
 humidity_july <- as.numeric(humidity_forecast$mean)
 ```
 
-```{r NNETAR1, echo=TRUE, message=FALSE, warning=FALSE}
-#You can play with the different values for p and P, you can also use xreg with Fourier term to model the multiple seasonality
+```{r Model 9: NNETAR1, echo=TRUE, message=FALSE, warning=FALSE}
+# Assuming humidity_clean is a dataframe with a column named
+# daily_average containing humidity values
 
-# Assuming humidity_clean is a dataframe with a column named daily_average containing humidity values
-humidity_matrix <- as.matrix(humidity_clean$daily_average)  # Extract and convert to matrix
+humidity_matrix <- as.matrix(humidity_clean$daily_average)
+# Extract and convert to matrix
 
 # Fit the neural network model
 NN_fit <- nnetar(load_ts, p = 1, P = 0, xreg = humidity_matrix)
@@ -438,10 +431,12 @@ temperature_forecast <- forecast(auto.arima(temperature_ts),h=31)
 temperature_july <- as.numeric(temperature_forecast$mean)
 ```
 
-```{r NNETAR2, echo=TRUE, message=FALSE, warning=FALSE}
+```{r Model 10: NNETAR2, echo=TRUE, message=FALSE, warning=FALSE}
+# Assuming temperature_clean is a dataframe with a column named
+# daily_average containing humidity values
 
-# Assuming temperature_clean is a dataframe with a column named daily_average containing humidity values
-temperature_matrix <- as.matrix(temperature_clean$daily_average)  # Extract and convert to matrix
+temperature_matrix <- as.matrix(temperature_clean$daily_average)
+# Extract and convert to matrix
 
 # Fit the neural network model
 NN_fit_temp <- nnetar(load_ts, p = 1, P = 0, xreg = temperature_matrix)
@@ -456,7 +451,7 @@ NN_temp_for_values <- as.numeric(NN_temp_for$mean)
 print(NN_temp_for_values)
 ```
 
-```{r NNETAR3, echo=TRUE, message=FALSE, warning=FALSE}
+```{r Model 11: NNETAR3, echo=TRUE, message=FALSE, warning=FALSE}
 
 # Fit the neural network model using temperature and humidity 
 NN_fit_temp_hum <- nnetar(load_ts, p = 1, P = 0, xreg = cbind(temperature_matrix, 
@@ -472,10 +467,11 @@ NN_temp_hum_for_values <- as.numeric(NN_temp_hum_for$mean)
 
 print(NN_temp_hum_for_values)
 ```
+We fit three Neural Network models: one with humidity as a regressor (NNETAR1), one with temperature as a regressor (NNETAR1), and one with both temperature and humidity as regressors (NNETAR3). Of these three, NNETAR3 produced the best forecast compared to the vanilla model. The forecast results improve by incorporating exogenous variables. We will need to try a model that can
+capture the seasonal variance in humidity in temperature if we are to improve our forecast.
 
-<<<<<<< HEAD
-=======
-```{r TBATs}
+## TBATS
+```{r Model 12: TBATs}
 # TBATS can take time to fit
 TBATS_fit <- tbats(load_ts, xreg=cbind(temperature_matrix, humidity_matrix))
 
@@ -486,5 +482,4 @@ TBATs_values <- as.numeric(TBATS_for$mean)
 print(TBATs_values)
 
 ```
->>>>>>> a9a87cff6fc999b83337b44bbba37cdace19d065
-
+The TBATS model with temperature and humidity as exogenous regressors produced the best forecast of all the models attempted.
