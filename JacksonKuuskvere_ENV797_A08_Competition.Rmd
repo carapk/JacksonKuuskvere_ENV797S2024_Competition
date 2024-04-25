@@ -470,3 +470,5 @@ NN_temp_hum_for_values <- as.numeric(NN_temp_hum_for$mean)
 
 print(NN_temp_hum_for_values)
 ```
+
+
