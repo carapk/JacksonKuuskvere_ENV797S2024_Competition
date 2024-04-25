@@ -37,9 +37,11 @@ load_clean <- load_RAW %>%
            rowMeans(select(., h1:h24))) %>% 
             # transforming hourly data into daily data
   select(-h1:-h24) %>% # dropping hourly columns
-  select(-meter_id) %>% ## drop meter ID
-  mutate(daily_average = 
-           na.approx(load_clean$daily_average)) 
+  select(-meter_id)# %>% ## drop meter ID
+ 
+load_clean$daily_average <- na.approx(load_clean$daily_average)
+ #mutate(daily_average = 
+           #na.approx(load_clean$daily_average)) 
             # interpolating N/A values with na.approx
 
 # check for missing dates by creating dummy data frame for dates
@@ -293,7 +295,7 @@ forecast_values_Model4 <- as.numeric(forecasted_Model4$mean)
 actual_values_Model4 <- as.numeric(test_ts)
 
 # Compare the forecasted training values with the actual values
-comparison_Model4 <- data.frame(Actual = actual_values_Model4, Forecasted = forecast_values_Model4)
+#comparison_Model4 <- data.frame(Actual = actual_values_Model4, Forecasted = forecast_values_Model4)
 
 # Forecast using Model4
 forecasted_Model4_full <- forecast(deseasonal_load, h = 31)
@@ -397,9 +399,9 @@ forecasted_Model10 <- forecast(Model10, h = 30)
 forecast_values_Model10 <- as.numeric(forecasted_Model10$mean)
 
 # Extract the forecasted values
-forecast_values_Model10_full <- as.numeric(forecasted_Model10_full$mean)
+#forecast_values_Model10_full <- as.numeric(forecasted_Model10_full$mean)
 
-print(forecast_values_Model10_full)
+#print(forecast_values_Model10_full)
 ```
 
 Submissions 5, 6 and 7 all yielded the same results. We will need to incorporate exogenous variable if we will improve our model further.
@@ -471,4 +473,18 @@ NN_temp_hum_for_values <- as.numeric(NN_temp_hum_for$mean)
 print(NN_temp_hum_for_values)
 ```
 
+<<<<<<< HEAD
+=======
+```{r TBATs}
+# TBATS can take time to fit
+TBATS_fit <- tbats(load_ts, xreg=cbind(temperature_matrix, humidity_matrix))
+
+TBATS_for <- forecast(TBATS_fit, h=31)
+
+TBATs_values <- as.numeric(TBATS_for$mean)
+
+print(TBATs_values)
+
+```
+>>>>>>> a9a87cff6fc999b83337b44bbba37cdace19d065
 
