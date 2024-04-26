@@ -5,10 +5,21 @@ date: "2024-03-28"
 output: pdf_document
 ---
 
-```{r setup, echo=TRUE, message=FALSE, warning=FALSE}
+
+## Setup
+First R code chunk is used for setting the options for all R code chunks.
+The choice echo=TRUE means both code and output will appear on report, include = FALSE neither code nor output is printed.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), tidy=FALSE) 
 ```
 
 ```{r setup and packages}
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	include = FALSE
+)
 library(lubridate)
 library(ggplot2)
 library(forecast)
@@ -24,7 +35,7 @@ library(zoo)
 ```
 
 ## Data
-```{r loading data}
+```{r loading data, message=FALSE, warning=FALSE}
 # loading all data
 load_RAW <- read_excel("./Data/load.xlsx",col_names=TRUE,na="NA")
 humidity_RAW <- read_excel("./Data/relative_humidity.xlsx",col_names=TRUE)
